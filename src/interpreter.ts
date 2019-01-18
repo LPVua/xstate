@@ -16,7 +16,9 @@ import {
   ServiceConfig,
   InvokeCallback,
   Sender,
-  DisposeActivityFunction
+  DisposeActivityFunction,
+  ActivityConfig,
+  ActionFunction
 } from './types';
 import { State } from './State';
 import * as actionTypes from './actionTypes';
@@ -121,6 +123,21 @@ export class Interpreter<
   TStateSchema extends StateSchema = any,
   TEvent extends EventObject = EventObject
 > {
+
+  /**
+   * Actions attached to interpreter
+   */
+  public actions: {
+    [key: string]: ActionFunction<TContext, TEvent>
+  };
+
+  /**
+   * Activities attached to interpreter
+   */
+  public activities: {
+    [key: string]: ActivityConfig<TContext, TEvent>
+  };
+
   /**
    * The default interpreter options:
    *
@@ -571,7 +588,7 @@ export class Interpreter<
           const implementation =
             this.machine.options && this.machine.options.activities
               ? this.machine.options.activities[activity.type]
-              : undefined;
+              : this.activities[activity.type] || undefined;
 
           if (!implementation) {
             // tslint:disable-next-line:no-console
@@ -604,6 +621,12 @@ export class Interpreter<
         }
         break;
       default:
+        const actionConfig = this.actions[action.type];
+        if(actionConfig) {
+          actionConfig(context, event, { action })
+
+          break;
+        }
         // tslint:disable-next-line:no-console
         console.warn(
           `No implementation found for action type '${action.type}'`
